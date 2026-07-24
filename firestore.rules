@@ -1,0 +1,112 @@
+rules_version = '2';
+
+// eNOTIF Firestore Security Rules
+// Primary authorization is enforced server-side in Next.js API routes using
+// the Firebase Admin SDK (which bypasses these rules). These rules are a
+// defense-in-depth layer for any direct client-side reads/listeners and to
+// block writes that should only ever happen through the server.
+//
+// Custom claims set on each user's ID token (see src/lib/data/users.ts):
+// enotif_role, enotif_province, enotif_cenro
+//   enotif_role: "regional_admin" | "penro_admin" | "cenro_personnel" | "cashier"
+//   enotif_province: string (PENRO office name), present for penro_admin/cenro_personnel/cashier
+//   enotif_cenro: string (CENRO office name), present for cenro_personnel
+//
+// Claims are namespaced with an "enotif_" prefix because this Firebase
+// project (esapa-denr-r8) is shared with other DENR Region VIII systems
+// (eSAPA, eNOTIG) that use the same Firebase Authentication user pool.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return request.auth.token.enotif_role;
+    }
+
+    function isRegionalAdmin() {
+      return isSignedIn() && role() == 'regional_admin';
+    }
+
+    function isPenroAdmin() {
+      return isSignedIn() && role() == 'penro_admin';
+    }
+
+    function isCenroPersonnel() {
+      return isSignedIn() && role() == 'cenro_personnel';
+    }
+
+    function isCashier() {
+      return isSignedIn() && role() == 'cashier';
+    }
+
+    function sameProvince(province) {
+      return request.auth.token.enotif_province == province;
+    }
+
+    function sameCenro(cenro) {
+      return request.auth.token.enotif_cenro == cenro;
+    }
+
+    // ---------------- users ----------------
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isRegionalAdmin() ||
+                    (isPenroAdmin() && sameProvince(resource.data.province)));
+      allow create, update, delete: if isRegionalAdmin();
+    }
+
+    // ---------------- leases ----------------
+    match /leases/{leaseId} {
+      allow read: if isRegionalAdmin() ||
+                    (isPenroAdmin() && sameProvince(resource.data.assignedPenro)) ||
+                    (isCenroPersonnel() && sameCenro(resource.data.assignedCenro)) ||
+                    (isCashier() && sameProvince(resource.data.assignedPenro));
+
+      allow create: if isRegionalAdmin() || isPenroAdmin();
+
+      allow update: if isRegionalAdmin() ||
+                      (isPenroAdmin() && sameProvince(resource.data.assignedPenro)) ||
+                      (isCenroPersonnel() && sameCenro(resource.data.assignedCenro));
+
+      allow delete: if isRegionalAdmin();
+    }
+
+    // ---------------- payments ----------------
+    match /payments/{paymentId} {
+      allow read: if isRegionalAdmin() ||
+                    (isPenroAdmin() && sameProvince(resource.data.province)) ||
+                    (isCenroPersonnel() && sameCenro(resource.data.cenro)) ||
+                    (isCashier() && sameProvince(resource.data.province));
+
+      allow create: if isCashier() || isRegionalAdmin();
+      allow update, delete: if isRegionalAdmin();
+    }
+
+    // ------------- notifications (server-written only) -------------
+    match /notifications/{notificationId} {
+      allow read: if isRegionalAdmin() ||
+                    (isPenroAdmin() && sameProvince(resource.data.province)) ||
+                    (isCenroPersonnel() && sameCenro(resource.data.cenro)) ||
+                    (isCashier() && sameProvince(resource.data.province));
+      allow write: if false; // written only by Cloud Functions / Admin SDK
+    }
+
+    // ------------- demand_letters (server-written only) -------------
+    match /demand_letters/{docId} {
+      allow read: if isRegionalAdmin() ||
+                    (isPenroAdmin() && sameProvince(resource.data.province)) ||
+                    (isCenroPersonnel() && sameCenro(resource.data.cenro));
+      allow write: if false; // written only by Cloud Functions / Admin SDK
+    }
+
+    // ------------- audit_logs (server-written only) -------------
+    match /audit_logs/{docId} {
+      allow read: if isRegionalAdmin() ||
+                    (isPenroAdmin() && sameProvince(resource.data.province));
+      allow write: if false; // written only via Admin SDK from API routes
+    }
+  }
+}

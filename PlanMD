@@ -1,0 +1,601 @@
+# AGENTS.md
+
+# eNOTIF
+## Electronic Notification System for Foreshore Lease Administration
+
+Version: 1.0
+Organization: Department of Environment and Natural Resources (DENR)
+Region: Region VIII
+Project Type: Internal Web Application
+
+---
+
+# Project Overview
+
+eNOTIF (Electronic Notification System) is an internal web-based application developed for the Department of Environment and Natural Resources (DENR) to automate the monitoring and collection of annual Foreshore Lease Agreement (FLA) rental payments.
+
+The system addresses delayed payment collections caused by lessees forgetting payment schedules by automatically notifying DENR personnel and lessees before payment deadlines.
+
+This system is intended ONLY for authorized DENR personnel and is not accessible to the public.
+
+---
+
+# Project Goal
+
+Increase annual rental collection efficiency by automating:
+
+- Billing reminders
+- Internal notifications
+- Demand letters
+- Payment monitoring
+- Collection reporting
+
+---
+
+# Organizational Hierarchy
+
+Regional Office
+│
+├── PENRO Samar
+│ ├── CENRO 1
+│ └── CENRO 2
+│
+├── PENRO Ormoc
+├── PENRO Southern Leyte
+├── PENRO Biliran
+└── Additional PENRO offices
+
+Permissions follow this hierarchy.
+
+---
+
+# User Roles
+
+## Regional Administrator
+
+Permissions
+
+- Full system access
+- Manage users
+- View all records
+- View analytics
+- Generate reports
+- Configure system
+
+---
+
+## PENRO Administrator
+
+Permissions
+
+- Register leases
+- Edit leases
+- Approve registrations
+- View assigned province
+- Generate reports
+- Receive reminders
+
+---
+
+## CENRO Personnel
+
+Permissions
+
+- View assigned leases
+- Update monitoring records
+- Receive reminders
+- Print reports
+
+Cannot
+
+- Delete records
+- Manage users
+
+---
+
+## Cashier
+
+Permissions
+
+- View upcoming collections
+- Record payments
+- Print receipts
+- Update payment status
+
+Cannot
+
+- Edit lease information
+- Delete records
+
+---
+
+# Core Modules
+
+## Authentication
+
+Features
+
+- Login
+- Logout
+- Password hashing
+- Session management
+- Role-based authorization
+- Audit logging
+
+---
+
+## User Management
+
+Manage
+
+- Regional users
+- PENRO users
+- CENRO users
+- Cashiers
+
+---
+
+## Lease Registration
+
+Each lease contains
+
+- FLA Number
+- Applicant Name
+- Email Address
+- Contact Number
+- Mailing Address
+- Municipality
+- Barangay
+- Coordinates
+- Lease Type
+- Area
+- Annual Rental
+- Billing Date
+- Due Date
+- Lease Start Date
+- Expiration Date
+- Assigned PENRO
+- Assigned CENRO
+- Status
+
+Status values
+
+- ACTIVE
+- FOR PAYMENT
+- PAID
+- OVERDUE
+- EXPIRED
+
+---
+
+## Dashboard
+
+Display
+
+- Total Registered Leases
+- Residential
+- Commercial
+- Industrial
+- Upcoming Payments
+- Due Today
+- Overdue Accounts
+- Collection Rate
+- Revenue
+- Notifications
+
+---
+
+## Notification Module
+
+Runs automatically every day.
+
+Rules
+
+### 10 Days Before Due
+
+Notify
+
+- Assigned PENRO
+- Assigned CENRO
+- Cashier
+- Lessee
+
+---
+
+### 3 Days Before Due
+
+Send reminder email to lessee.
+
+---
+
+### Due Date
+
+If payment exists
+
+Status becomes
+
+PAID
+
+Otherwise
+
+FOR PAYMENT
+
+---
+
+### After Due Date
+
+If unpaid
+
+Status becomes
+
+OVERDUE
+
+Automatically generate demand letter.
+
+Notify
+
+- PENRO
+- Cashier
+
+---
+
+# Demand Letter Module
+
+Generate
+
+- PDF
+- Email
+- Printable copy
+
+Uses templates.
+
+Automatically populate
+
+- Applicant
+- FLA Number
+- Annual Rental
+- Due Date
+- Penalty
+- Current Date
+
+---
+
+# Payment Module
+
+Cashier functions
+
+- Search lease
+- Record payment
+- Print receipt
+- Upload proof
+- Update payment
+
+After payment
+
+- Stop reminders
+- Update dashboard
+- Create audit log
+
+---
+
+# Reports
+
+Generate
+
+- Monthly Collection
+- Annual Collection
+- Overdue Accounts
+- Collection Rate
+- Revenue by PENRO
+- Revenue by Municipality
+- Revenue by Property Type
+
+Export
+
+- PDF
+- Excel
+
+---
+
+# Analytics
+
+Charts
+
+- Monthly Collections
+- Annual Collections
+- Overdue Trend
+- Collection Efficiency
+- Revenue Distribution
+
+---
+
+# Scheduler
+
+Daily scheduler executes
+
+1.
+
+Check all leases
+
+↓
+
+2.
+
+Due in 10 days?
+
+↓
+
+Send Reminder
+
+↓
+
+3.
+
+Due in 3 days?
+
+↓
+
+Send Reminder
+
+↓
+
+4.
+
+Due today?
+
+↓
+
+Await Payment
+
+↓
+
+5.
+
+Overdue?
+
+↓
+
+Generate Demand Letter
+
+↓
+
+Notify Personnel
+
+---
+
+# Suggested Database
+
+## users
+
+id
+name
+email
+password
+role
+office
+status
+
+---
+
+## leases
+
+lease_id
+fla_number
+applicant
+email
+contact
+address
+lease_type
+municipality
+barangay
+coordinates
+annual_rental
+billing_date
+due_date
+status
+assigned_penro
+assigned_cenro
+
+---
+
+## payments
+
+payment_id
+lease_id
+amount
+payment_date
+receipt_number
+cashier_id
+remarks
+
+---
+
+## notifications
+
+notification_id
+lease_id
+recipient
+notification_type
+sent_date
+status
+
+---
+
+## demand_letters
+
+id
+lease_id
+generated_date
+pdf_location
+email_status
+
+---
+
+## audit_logs
+
+id
+user
+action
+date_time
+
+---
+
+# Email Templates
+
+Template types
+
+- Upcoming Billing
+- 10-Day Reminder
+- 3-Day Reminder
+- Payment Confirmation
+- Demand Letter
+
+Templates should support placeholders.
+
+Example
+
+{{ApplicantName}}
+
+{{FLANumber}}
+
+{{Amount}}
+
+{{DueDate}}
+
+{{Office}}
+
+---
+
+# Coding Standards
+
+Backend
+
+- PHP 8+
+- PDO prepared statements
+- MVC architecture
+- No inline SQL in views
+
+Frontend
+
+- Bootstrap 5
+- HTML5
+- JavaScript ES6
+- Responsive design
+
+Database
+
+- MySQL
+- Foreign keys
+- Indexed lookup fields
+
+Security
+
+- Password hashing using password_hash()
+- Prepared statements
+- CSRF protection
+- XSS sanitization
+- Session timeout
+- Role middleware
+
+---
+
+# Folder Structure
+
+```
+app/
+    Controllers/
+    Models/
+    Services/
+    Middleware/
+    Helpers/
+
+config/
+
+database/
+
+public/
+
+resources/
+
+templates/
+
+emails/
+
+letters/
+
+storage/
+
+logs/
+
+uploads/
+
+cron/
+
+routes/
+
+vendor/
+```
+
+---
+
+# Coding Rules for AI Agents
+
+Always
+
+- Use prepared statements.
+- Keep business logic out of views.
+- Validate all inputs.
+- Sanitize outputs.
+- Follow MVC principles.
+- Write reusable functions.
+- Document every public function.
+- Use meaningful variable names.
+
+Never
+
+- Hardcode credentials.
+- Duplicate code.
+- Delete audit logs.
+- Bypass authentication.
+- Expose database errors.
+- Store passwords in plain text.
+
+---
+
+# Future Enhancements
+
+- SMS notifications
+- GIS property mapping
+- QR code verification
+- Digital signatures
+- Mobile application
+- Online payment gateway
+- DENR Single Sign-On integration
+- GIS dashboard
+- AI collection forecasting
+
+---
+
+# Success Criteria
+
+The system should
+
+✓ Automatically remind personnel before payment deadlines
+
+✓ Notify lessees through email
+
+✓ Generate demand letters without manual encoding
+
+✓ Allow cashiers to update payments
+
+✓ Provide Regional Office with real-time monitoring
+
+✓ Improve annual rental collection efficiency
+
+✓ Reduce overdue accounts
+
+✓ Maintain complete audit logs
+
+---
+
+# End of File

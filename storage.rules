@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Storage rules for eNOTIF
+// - proof-of-payment uploads: writable by cashier/regional_admin, readable by
+//   assigned personnel (server-side download links are generated via Admin SDK,
+//   so this mainly restricts direct client access).
+// - demand letter PDFs: written only by Cloud Functions (Admin SDK), readable
+//   by signed-in DENR personnel.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /payment-proofs/{leaseId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+                     request.resource.size < 10 * 1024 * 1024 &&
+                     request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    match /demand-letters/{leaseId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if false; // written only by Cloud Functions via Admin SDK
+    }
+  }
+}
