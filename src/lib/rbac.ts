@@ -19,6 +19,9 @@ export type Permission =
   | "payments:record"
   | "payments:view"
   | "users:manage"
+  | "users:view"
+  | "cenro:manage"
+  | "penro:manage"
   | "reports:generate"
   | "audit:view"
   | "system:configure";
@@ -32,6 +35,9 @@ const PERMISSIONS: Record<UserRole, Permission[]> = {
     "payments:record",
     "payments:view",
     "users:manage",
+    "users:view",
+    "cenro:manage",
+    "penro:manage",
     "reports:generate",
     "audit:view",
     "system:configure",
@@ -41,10 +47,11 @@ const PERMISSIONS: Record<UserRole, Permission[]> = {
     "leases:edit",
     "leases:view",
     "payments:view",
+    "users:view",
     "reports:generate",
   ],
-  cenro_personnel: ["leases:view", "reports:generate"],
-  cashier: ["leases:view", "payments:record", "payments:view"],
+  cenro_personnel: ["leases:view", "users:view", "reports:generate"],
+  cashier: ["leases:view", "payments:record", "payments:view", "users:view"],
 };
 
 export function can(role: UserRole, permission: Permission): boolean {

@@ -47,8 +47,13 @@ export const PENRO_OFFICES = Object.keys(OFFICE_HIERARCHY);
 export const REMINDER_DAYS_BEFORE_DUE = 10;
 export const DEMAND_LETTER_DAYS_BEFORE_DUE = 3;
 
+// MUST be named "__session" — Firebase Hosting strips all cookies from
+// incoming requests to Cloud Functions/Cloud Run EXCEPT one literally named
+// "__session" (see https://firebase.google.com/docs/hosting/manage-cache#using_cookies).
+// Any other name is silently stripped, causing every page load after login to
+// appear signed-out even though the cookie was set correctly.
 export const SESSION_COOKIE_NAME =
-  process.env.SESSION_COOKIE_NAME ?? "enotif_session";
+  process.env.SESSION_COOKIE_NAME ?? "__session";
 export const SESSION_COOKIE_MAX_AGE_MS = Number(
   process.env.SESSION_COOKIE_MAX_AGE_MS ?? 5 * 24 * 60 * 60 * 1000
 );

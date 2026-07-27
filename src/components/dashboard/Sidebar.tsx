@@ -33,6 +33,16 @@ const NAV_ITEMS: {
     show: (role) => can(role, "users:manage"),
   },
   {
+    href: "/penros",
+    label: "PENRO Management",
+    show: (role) => can(role, "penro:manage"),
+  },
+  {
+    href: "/cenros",
+    label: "CENRO Management",
+    show: (role) => can(role, "cenro:manage"),
+  },
+  {
     href: "/audit-logs",
     label: "Audit Logs",
     show: (role) => can(role, "audit:view"),

@@ -22,6 +22,33 @@ export interface UserDoc {
   updatedAt: string;
 }
 
+export interface PENRODoc {
+  id: string;
+  name: string;
+  code: string;
+  province: string;
+  region: string;
+  address: string;
+  contactNumber: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CENRODoc {
+  id: string;
+  name: string;
+  code: string;
+  province: string;
+  region: string;
+  address: string;
+  contactNumber: string;
+  email: string;
+  penroId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type LeaseType = "residential" | "commercial" | "industrial";
 
 export type LeaseStatus =
@@ -92,6 +119,7 @@ export interface NotificationDoc {
   sentDate: string;
   status: NotificationStatus;
   error?: string;
+  pdfUrl?: string;
 }
 
 export interface DemandLetterDoc {

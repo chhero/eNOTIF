@@ -30,8 +30,14 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
     return response;
-  } catch {
-    return NextResponse.json({ error: "Invalid or expired credentials" }, { status: 401 });
+  } catch (error) {
+    console.error("❌ Session creation failed:", {
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error),
+      code: error instanceof Error && "code" in error ? (error as any).code : undefined,
+      fullError: error,
+    });
+    return NextResponse.json({ error: "Failed to establish session" }, { status: 500 });
   }
 }
 

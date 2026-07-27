@@ -69,7 +69,12 @@ export async function recordPayment(
     createdAt: now,
   };
 
-  const ref = await adminDb.collection(COLLECTION).add(data);
+  // Remove undefined values for optional fields
+  const cleanedData = Object.fromEntries(
+    Object.entries(data).filter(([_, v]) => v !== undefined)
+  ) as Omit<PaymentDoc, "id">;
+
+  const ref = await adminDb.collection(COLLECTION).add(cleanedData);
 
   await adminDb.collection("leases").doc(lease.id).update({
     status: "PAID",
