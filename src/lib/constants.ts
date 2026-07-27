@@ -34,19 +34,6 @@ export const STATUS_BADGE_CLASSES: Record<LeaseStatus, string> = {
   EXPIRED: "bg-gray-200 text-gray-700",
 };
 
-// DENR Region VIII organizational hierarchy: PENRO -> CENRO offices.
-export const OFFICE_HIERARCHY: Record<string, string[]> = {
-  "PENRO Samar": ["CENRO 1", "CENRO 2"],
-  "PENRO Ormoc": ["CENRO Ormoc"],
-  "PENRO Southern Leyte": ["CENRO Southern Leyte"],
-  "PENRO Biliran": ["CENRO Biliran"],
-};
-
-export const PENRO_OFFICES = Object.keys(OFFICE_HIERARCHY);
-
-export const REMINDER_DAYS_BEFORE_DUE = 10;
-export const DEMAND_LETTER_DAYS_BEFORE_DUE = 3;
-
 // MUST be named "__session" — Firebase Hosting strips all cookies from
 // incoming requests to Cloud Functions/Cloud Run EXCEPT one literally named
 // "__session" (see https://firebase.google.com/docs/hosting/manage-cache#using_cookies).

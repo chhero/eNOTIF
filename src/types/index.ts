@@ -133,6 +133,20 @@ export interface DemandLetterDoc {
   emailStatus: NotificationStatus;
 }
 
+export interface NotificationSettingsDoc {
+  /** Days before the due date to send the first reminder (to PENRO/CENRO/cashier/lessee). */
+  reminderDaysBeforeDue: number;
+  /** Days before the due date to send the second reminder (to lessee only). */
+  secondReminderDaysBeforeDue: number;
+  /** Days after the due date to wait before generating/sending the demand letter. */
+  demandLetterGraceDays: number;
+  /** Days given to the lessee to respond, as stated in the demand letter text. */
+  demandLetterResponseDays: number;
+  /** Penalty/surcharge percentage applied to the annual rental once overdue (e.g. 2 = 2%). */
+  penaltyRatePercent: number;
+  updatedAt: string;
+}
+
 export interface AuditLogDoc {
   id: string;
   userId: string;

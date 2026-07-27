@@ -4,9 +4,7 @@ import { can } from "@/lib/rbac";
 import { listLeasesForUser } from "@/lib/data/leases";
 import { listPaymentsForUser } from "@/lib/data/payments";
 import { StatCard } from "@/components/StatCard";
-import { ExportCsvButton } from "@/components/reports/ExportCsvButton";
-import { RevenueBarChart } from "@/components/reports/RevenueBarChart";
-import type { PaymentDoc } from "@/types";
+import { ReportsClient } from "@/components/reports/ReportsClient";
 
 export default async function ReportsPage() {
   const user = await getCurrentUser();
@@ -33,16 +31,6 @@ export default async function ReportsPage() {
   const paidCount = leases.filter((l) => l.status === "PAID").length;
   const collectionRate = leases.length ? Math.round((paidCount / leases.length) * 100) : 0;
 
-  const revenueByPenro = groupSum(payments, (p) => p.province);
-  const revenueByMunicipality = groupSum(
-    payments,
-    (p) => leases.find((l) => l.id === p.leaseId)?.municipality ?? "Unknown"
-  );
-  const revenueByType = groupSum(
-    payments,
-    (p) => leases.find((l) => l.id === p.leaseId)?.leaseType ?? "unknown"
-  );
-
   return (
     <div className="space-y-8">
       <div>
@@ -57,63 +45,11 @@ export default async function ReportsPage() {
         <StatCard label="Collection Rate" value={`${collectionRate}%`} accent="success" />
       </div>
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Revenue by PENRO
-          </h2>
-          <ExportCsvButton
-            filename="revenue-by-penro.csv"
-            headers={["PENRO Office", "Revenue"]}
-            rows={Object.entries(revenueByPenro)}
-          />
-        </div>
-        <RevenueBarChart data={toChartData(revenueByPenro)} />
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Revenue by Municipality
-          </h2>
-          <ExportCsvButton
-            filename="revenue-by-municipality.csv"
-            headers={["Municipality", "Revenue"]}
-            rows={Object.entries(revenueByMunicipality)}
-          />
-        </div>
-        <RevenueBarChart data={toChartData(revenueByMunicipality)} />
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Revenue by Property Type
-          </h2>
-          <ExportCsvButton
-            filename="revenue-by-type.csv"
-            headers={["Lease Type", "Revenue"]}
-            rows={Object.entries(revenueByType)}
-          />
-        </div>
-        <RevenueBarChart data={toChartData(revenueByType)} />
-      </section>
+      <ReportsClient leases={leases} payments={payments} />
     </div>
   );
 }
 
 function money(value: number) {
   return value.toLocaleString("en-PH", { style: "currency", currency: "PHP" });
-}
-
-function groupSum(items: PaymentDoc[], keyFn: (item: PaymentDoc) => string): Record<string, number> {
-  return items.reduce<Record<string, number>>((acc, item) => {
-    const key = keyFn(item);
-    acc[key] = (acc[key] ?? 0) + item.amount;
-    return acc;
-  }, {});
-}
-
-function toChartData(record: Record<string, number>) {
-  return Object.entries(record).map(([name, revenue]) => ({ name, revenue }));
 }

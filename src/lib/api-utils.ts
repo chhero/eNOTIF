@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { UnauthorizedError, ForbiddenError } from "@/lib/auth/session";
+import { UnauthorizedError, ForbiddenError, ValidationError } from "@/lib/auth/session";
 
 /** Maps known errors to safe HTTP responses without leaking internals. */
 export function handleApiError(error: unknown): NextResponse {
@@ -9,6 +9,9 @@ export function handleApiError(error: unknown): NextResponse {
   }
   if (error instanceof ForbiddenError) {
     return NextResponse.json({ error: error.message }, { status: 403 });
+  }
+  if (error instanceof ValidationError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
   if (error instanceof ZodError) {
     return NextResponse.json(

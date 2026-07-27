@@ -63,6 +63,14 @@
         { "fieldPath": "province", "order": "ASCENDING" },
         { "fieldPath": "sentDate", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cenro", "order": "ASCENDING" },
+        { "fieldPath": "sentDate", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

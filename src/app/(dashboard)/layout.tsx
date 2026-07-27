@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { TopBar } from "@/components/dashboard/TopBar";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 export default async function DashboardGroupLayout({
   children,
@@ -13,13 +12,5 @@ export default async function DashboardGroupLayout({
     redirect("/login");
   }
 
-  return (
-    <div className="flex min-h-screen flex-1 bg-slate-50">
-      <Sidebar role={user.role} />
-      <div className="flex flex-1 flex-col">
-        <TopBar user={user} />
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <DashboardShell user={user}>{children}</DashboardShell>;
 }

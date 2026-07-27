@@ -3,6 +3,7 @@ import { requireUser, ForbiddenError } from "@/lib/auth/session";
 import { can } from "@/lib/rbac";
 import { handleApiError } from "@/lib/api-utils";
 import { listUsers, createUser } from "@/lib/data/users";
+import { verifyOfficeAssignment } from "@/lib/data/offices";
 import { userInputSchema } from "@/lib/validation/user";
 import { writeAuditLog } from "@/lib/data/audit";
 
@@ -28,6 +29,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const input = userInputSchema.parse(body);
+    if (input.province) {
+      await verifyOfficeAssignment(input.province, input.cenro);
+    }
 
     const created = await createUser(input);
     await writeAuditLog(user, "USER_CREATED", `Created user ${created.email} (${created.role})`);

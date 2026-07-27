@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { USER_ROLES, OFFICE_HIERARCHY, PENRO_OFFICES } from "@/lib/constants";
-import type { UserRole } from "@/types";
+import { USER_ROLES } from "@/lib/constants";
+import type { UserRole, PENRODoc, CENRODoc } from "@/types";
 
 export function UserForm() {
   const router = useRouter();
@@ -11,12 +11,41 @@ export function UserForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("cenro_personnel");
-  const [province, setProvince] = useState(PENRO_OFFICES[0]);
+  const [province, setProvince] = useState("");
   const [cenro, setCenro] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [penros, setPenros] = useState<PENRODoc[]>([]);
+  const [cenros, setCenros] = useState<CENRODoc[]>([]);
+  const [officesLoading, setOfficesLoading] = useState(true);
 
-  const cenroOptions = OFFICE_HIERARCHY[province] ?? [];
+  useEffect(() => {
+    async function loadOffices() {
+      try {
+        const [penroRes, cenroRes] = await Promise.all([
+          fetch("/api/penros"),
+          fetch("/api/cenros"),
+        ]);
+        const penroData = await penroRes.json().catch(() => ({}));
+        const cenroData = await cenroRes.json().catch(() => ({}));
+        setPenros(penroData.penros ?? []);
+        setCenros(cenroData.cenros ?? []);
+      } finally {
+        setOfficesLoading(false);
+      }
+    }
+    loadOffices();
+  }, []);
+
+  useEffect(() => {
+    if (!province && penros.length > 0) {
+      setProvince(penros[0].name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [penros]);
+
+  const selectedPenro = penros.find((p) => p.name === province);
+  const cenroOptions = cenros.filter((c) => c.penroId === selectedPenro?.id);
   const needsProvince = role !== "regional_admin";
   const needsCenro = role === "cenro_personnel";
 
@@ -97,9 +126,13 @@ export function UserForm() {
               setCenro("");
             }}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            disabled={officesLoading}
           >
-            {PENRO_OFFICES.map((office) => (
-              <option key={office} value={office}>{office}</option>
+            <option value="" disabled>
+              {officesLoading ? "Loading offices..." : "Select PENRO"}
+            </option>
+            {penros.map((office) => (
+              <option key={office.id} value={office.name}>{office.name}</option>
             ))}
           </select>
         </label>
@@ -108,10 +141,16 @@ export function UserForm() {
       {needsCenro && (
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-700">CENRO Office</span>
-          <select required value={cenro} onChange={(e) => setCenro(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+          <select
+            required
+            value={cenro}
+            onChange={(e) => setCenro(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            disabled={!selectedPenro}
+          >
             <option value="" disabled>Select CENRO</option>
             {cenroOptions.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c.id} value={c.name}>{c.name}</option>
             ))}
           </select>
         </label>

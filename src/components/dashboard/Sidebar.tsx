@@ -47,13 +47,24 @@ const NAV_ITEMS: {
     label: "Audit Logs",
     show: (role) => can(role, "audit:view"),
   },
+  {
+    href: "/settings",
+    label: "Settings",
+    show: (role) => can(role, "system:configure"),
+  },
 ];
 
-export function Sidebar({ role }: { role: UserRole }) {
+export function Sidebar({
+  role,
+  onNavigate,
+}: {
+  role: UserRole;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex h-full w-60 shrink-0 flex-col border-r border-slate-200 bg-white">
+    <nav className="flex h-full w-64 flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-5 py-4">
         <p className="text-lg font-bold text-green-800">eNOTIF</p>
         <p className="text-xs text-slate-500">DENR Region VIII</p>
@@ -66,6 +77,7 @@ export function Sidebar({ role }: { role: UserRole }) {
             <li key={item.href}>
               <Link
                 href={item.href}
+                onClick={onNavigate}
                 className={`block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   active
                     ? "bg-green-700 text-white"

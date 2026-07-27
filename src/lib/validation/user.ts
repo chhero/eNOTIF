@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { OFFICE_HIERARCHY } from "@/lib/constants";
 import type { UserRole } from "@/types";
 
 const roleValues: [UserRole, ...UserRole[]] = [
@@ -8,26 +7,27 @@ const roleValues: [UserRole, ...UserRole[]] = [
   "cenro_personnel",
   "cashier",
 ];
-const penroValues = Object.keys(OFFICE_HIERARCHY) as [string, ...string[]];
 
+// Note: province/cenro are validated against the actual Firestore
+// PENRO/CENRO records (see verifyOfficeAssignment in
+// src/lib/data/offices.ts), not a hardcoded list, since offices are managed
+// dynamically via the PENRO/CENRO Management pages.
 export const userInputSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required").max(150),
     email: z.string().trim().email("Valid email is required"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     role: z.enum(roleValues),
-    province: z.enum(penroValues).optional(),
+    province: z.string().trim().min(1).optional(),
     cenro: z.string().trim().optional(),
   })
   .refine((data) => data.role === "regional_admin" || !!data.province, {
     message: "Province/PENRO office is required for this role",
     path: ["province"],
   })
-  .refine(
-    (data) =>
-      data.role !== "cenro_personnel" ||
-      (!!data.province && (OFFICE_HIERARCHY[data.province] ?? []).includes(data.cenro ?? "")),
-    { message: "CENRO office must belong to the selected PENRO", path: ["cenro"] }
-  );
+  .refine((data) => data.role !== "cenro_personnel" || !!data.cenro, {
+    message: "CENRO office is required for this role",
+    path: ["cenro"],
+  });
 
 export type UserInput = z.infer<typeof userInputSchema>;

@@ -3,6 +3,7 @@ import { requireUser, ForbiddenError } from "@/lib/auth/session";
 import { can } from "@/lib/rbac";
 import { handleApiError } from "@/lib/api-utils";
 import { listLeasesForUser, createLease } from "@/lib/data/leases";
+import { verifyOfficeAssignment } from "@/lib/data/offices";
 import { leaseInputSchema } from "@/lib/validation/lease";
 import { writeAuditLog } from "@/lib/data/audit";
 
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const input = leaseInputSchema.parse(body);
+    await verifyOfficeAssignment(input.assignedPenro, input.assignedCenro);
 
     const lease = await createLease(input, user.uid);
     await writeAuditLog(user, "LEASE_CREATED", `Registered FLA ${lease.flaNumber}`);

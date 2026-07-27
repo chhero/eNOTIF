@@ -5,7 +5,8 @@ import type { LeaseDoc } from "../types";
 /** Generates a demand letter PDF for an overdue lease and returns it as a Buffer. */
 export function generateDemandLetterPdf(
   lease: Pick<LeaseDoc, "flaNumber" | "applicantName" | "annualRental" | "dueDate" | "assignedPenro">,
-  penalty: number
+  penalty: number,
+  responseDays: number = 15
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50 });
@@ -18,17 +19,36 @@ export function generateDemandLetterPdf(
     const today = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
 
     doc
-      .fontSize(14)
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text("Republic of the Philippines", { align: "center" })
+      .fontSize(13)
       .text("Department of Environment and Natural Resources", { align: "center" })
       .fontSize(11)
-      .text("Region VIII", { align: "center" })
-      .moveDown(2)
+      .text("Region VIII Eastern Visayas", { align: "center" })
+      .font("Helvetica")
+      .fontSize(10)
+      .text("Sto. Niño Extension, Tacloban City", { align: "center" })
+      .moveDown(0.5);
+
+    doc
+      .moveTo(doc.page.margins.left, doc.y)
+      .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+      .lineWidth(1)
+      .strokeColor("#15803d")
+      .stroke()
+      .moveDown(1.5);
+
+    doc
+      .font("Helvetica")
       .fontSize(11)
       .text(today, { align: "right" })
       .moveDown()
       .text(lease.applicantName)
       .moveDown()
+      .font("Helvetica-Bold")
       .text("Subject: DEMAND LETTER - Overdue Annual Rental for Foreshore Lease Agreement")
+      .font("Helvetica")
       .moveDown()
       .text(`Dear ${lease.applicantName},`)
       .moveDown()
@@ -36,20 +56,33 @@ export function generateDemandLetterPdf(
         `Our records show that the annual rental for your Foreshore Lease Agreement No. ${lease.flaNumber}, ` +
           `which was due on ${lease.dueDate}, remains unpaid as of the date of this letter.`
       )
-      .moveDown()
-      .text(`Amount Due: PHP ${lease.annualRental.toLocaleString()}`)
-      .text(`Penalty: PHP ${penalty.toLocaleString()}`)
-      .text(`Total Amount Due: PHP ${(lease.annualRental + penalty).toLocaleString()}`)
+      .moveDown();
+
+    doc
+      .font("Helvetica-Bold")
+      .text("Amount Due:", { continued: true })
+      .font("Helvetica")
+      .text(` PHP ${lease.annualRental.toLocaleString()}`)
+      .font("Helvetica-Bold")
+      .text("Penalty:", { continued: true })
+      .font("Helvetica")
+      .text(` PHP ${penalty.toLocaleString()}`)
+      .font("Helvetica-Bold")
+      .text("Total Amount Due:", { continued: true })
+      .font("Helvetica")
+      .text(` PHP ${(lease.annualRental + penalty).toLocaleString()}`)
       .moveDown()
       .text(
         `You are hereby required to settle your outstanding balance with the ${lease.assignedPenro} ` +
-          `within fifteen (15) days from receipt of this letter. Failure to do so may result in further ` +
+          `within ${responseDays} day${responseDays === 1 ? "" : "s"} from receipt of this letter. Failure to do so may result in further ` +
           `action, including but not limited to cancellation of your lease agreement.`
       )
       .moveDown(2)
       .text("Very truly yours,")
       .moveDown(2)
+      .font("Helvetica-Bold")
       .text(`${lease.assignedPenro}`)
+      .font("Helvetica")
       .text("Department of Environment and Natural Resources");
 
     doc.end();

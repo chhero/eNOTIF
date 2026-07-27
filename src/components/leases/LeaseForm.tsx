@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LEASE_TYPES, OFFICE_HIERARCHY, PENRO_OFFICES } from "@/lib/constants";
-import type { LeaseDoc } from "@/types";
+import { LEASE_TYPES } from "@/lib/constants";
+import type { LeaseDoc, PENRODoc, CENRODoc } from "@/types";
 
 type FormState = {
   flaNumber: string;
@@ -40,7 +40,7 @@ function toFormState(lease?: LeaseDoc): FormState {
     dueDate: lease?.dueDate ?? "",
     leaseStartDate: lease?.leaseStartDate ?? "",
     expirationDate: lease?.expirationDate ?? "",
-    assignedPenro: lease?.assignedPenro ?? PENRO_OFFICES[0],
+    assignedPenro: lease?.assignedPenro ?? "",
     assignedCenro: lease?.assignedCenro ?? "",
   };
 }
@@ -50,8 +50,37 @@ export function LeaseForm({ lease }: { lease?: LeaseDoc }) {
   const [form, setForm] = useState<FormState>(toFormState(lease));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [penros, setPenros] = useState<PENRODoc[]>([]);
+  const [cenros, setCenros] = useState<CENRODoc[]>([]);
+  const [officesLoading, setOfficesLoading] = useState(true);
 
-  const cenroOptions = OFFICE_HIERARCHY[form.assignedPenro] ?? [];
+  useEffect(() => {
+    async function loadOffices() {
+      try {
+        const [penroRes, cenroRes] = await Promise.all([
+          fetch("/api/penros"),
+          fetch("/api/cenros"),
+        ]);
+        const penroData = await penroRes.json().catch(() => ({}));
+        const cenroData = await cenroRes.json().catch(() => ({}));
+        setPenros(penroData.penros ?? []);
+        setCenros(cenroData.cenros ?? []);
+      } finally {
+        setOfficesLoading(false);
+      }
+    }
+    loadOffices();
+  }, []);
+
+  useEffect(() => {
+    if (!lease && !form.assignedPenro && penros.length > 0) {
+      setForm((prev) => ({ ...prev, assignedPenro: penros[0].name }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [penros, lease]);
+
+  const selectedPenro = penros.find((p) => p.name === form.assignedPenro);
+  const cenroOptions = cenros.filter((c) => c.penroId === selectedPenro?.id);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -157,17 +186,27 @@ export function LeaseForm({ lease }: { lease?: LeaseDoc }) {
               update("assignedCenro", "");
             }}
             className={inputClass}
+            disabled={officesLoading}
           >
-            {PENRO_OFFICES.map((office) => (
-              <option key={office} value={office}>{office}</option>
+            <option value="" disabled>
+              {officesLoading ? "Loading offices..." : "Select PENRO"}
+            </option>
+            {penros.map((office) => (
+              <option key={office.id} value={office.name}>{office.name}</option>
             ))}
           </select>
         </Field>
         <Field label="Assigned CENRO">
-          <select required value={form.assignedCenro} onChange={(e) => update("assignedCenro", e.target.value)} className={inputClass}>
+          <select
+            required
+            value={form.assignedCenro}
+            onChange={(e) => update("assignedCenro", e.target.value)}
+            className={inputClass}
+            disabled={!selectedPenro}
+          >
             <option value="" disabled>Select CENRO</option>
             {cenroOptions.map((cenro) => (
-              <option key={cenro} value={cenro}>{cenro}</option>
+              <option key={cenro.id} value={cenro.name}>{cenro.name}</option>
             ))}
           </select>
         </Field>

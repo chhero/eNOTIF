@@ -50,19 +50,21 @@ export function NotificationsTable({ notifications }: NotificationsTableProps) {
                   </span>
                 </td>
                 <td className="px-4 py-2">
-                  {n.pdfUrl && (
-                    <button
-                      onClick={() => setSelectedPdfUrl(n.pdfUrl!)}
-                      className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                    >
-                      📄 View PDF
-                    </button>
-                  )}
-                  {n.error && (
-                    <span title={n.error} className="text-red-600 text-xs font-medium">
-                      Error
-                    </span>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {n.pdfUrl && (
+                      <button
+                        onClick={() => setSelectedPdfUrl(n.pdfUrl!)}
+                        className="inline-flex w-fit items-center gap-1 rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                      >
+                        📄 View PDF
+                      </button>
+                    )}
+                    {n.error && (
+                      <span className="text-xs font-medium text-red-600" title={n.error}>
+                        Error: {n.error}
+                      </span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

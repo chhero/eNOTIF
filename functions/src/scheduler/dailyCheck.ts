@@ -1,14 +1,11 @@
 import * as logger from "firebase-functions/logger";
 import { getEnotifDb } from "../db";
 import type { LeaseDoc } from "../types";
-import {
-  REMINDER_DAYS_BEFORE_DUE,
-  DEMAND_LETTER_REMINDER_DAYS_BEFORE_DUE,
-  TIMEZONE,
-} from "../constants";
+import { TIMEZONE } from "../constants";
 import { formatDateInTimezone, addDaysToDateString } from "../lib/dateUtils";
 import { findRecipientsForLease } from "../data/users";
-import { sendAndLogNotification, wasNotifiedToday } from "../email/send";
+import { getNotificationSettings, type NotificationSettings } from "../data/settings";
+import { sendAndLogNotification, wasNotifiedToday, wasEverNotified } from "../email/send";
 import {
   tenDayReminderTemplate,
   tenDayLesseeReminderTemplate,
@@ -16,8 +13,6 @@ import {
   demandLetterTemplate,
 } from "../email/templates";
 import { generateDemandLetterPdf, uploadDemandLetterPdf } from "../pdf/demandLetter";
-
-const PENALTY_RATE = 0.02; // 2% surcharge on overdue annual rental (adjust per DENR policy)
 
 function toTemplateData(lease: LeaseDoc) {
   return {
@@ -40,26 +35,31 @@ async function fetchLeasesDueOn(db: FirebaseFirestore.Firestore, dueDate: string
 
 /**
  * Runs the full daily scheduler described in the eNOTIF plan:
- *  1. 10 days before due  -> notify PENRO, CENRO, cashier, and lessee
- *  2. 3 days before due   -> notify lessee
+ *  1. N days before due (configurable) -> notify PENRO, CENRO, cashier, and lessee
+ *  2. M days before due (configurable) -> notify lessee
  *  3. Due today           -> mark FOR PAYMENT if still unpaid
- *  4. Past due, unpaid    -> mark OVERDUE, generate + send demand letter,
- *                            notify PENRO and cashier
+ *  4. Past due, unpaid, past the configured grace period -> mark OVERDUE, generate + send
+ *                            demand letter, notify PENRO and cashier
  */
 export async function runDailyScheduler(now: Date = new Date()): Promise<void> {
   const db = getEnotifDb();
   const today = formatDateInTimezone(now, TIMEZONE);
+  const settings = await getNotificationSettings();
 
   await Promise.all([
-    handleTenDayReminders(db, today),
-    handleThreeDayReminders(db, today),
+    handleTenDayReminders(db, today, settings),
+    handleThreeDayReminders(db, today, settings),
     handleDueToday(db, today),
-    handleOverdue(db, today),
+    handleOverdue(db, today, settings),
   ]);
 }
 
-async function handleTenDayReminders(db: FirebaseFirestore.Firestore, today: string) {
-  const targetDate = addDaysToDateString(today, REMINDER_DAYS_BEFORE_DUE);
+async function handleTenDayReminders(
+  db: FirebaseFirestore.Firestore,
+  today: string,
+  settings: NotificationSettings
+) {
+  const targetDate = addDaysToDateString(today, settings.reminderDaysBeforeDue);
   const leases = await fetchLeasesDueOn(db, targetDate);
 
   for (const lease of leases) {
@@ -92,8 +92,12 @@ async function handleTenDayReminders(db: FirebaseFirestore.Firestore, today: str
   }
 }
 
-async function handleThreeDayReminders(db: FirebaseFirestore.Firestore, today: string) {
-  const targetDate = addDaysToDateString(today, DEMAND_LETTER_REMINDER_DAYS_BEFORE_DUE);
+async function handleThreeDayReminders(
+  db: FirebaseFirestore.Firestore,
+  today: string,
+  settings: NotificationSettings
+) {
+  const targetDate = addDaysToDateString(today, settings.secondReminderDaysBeforeDue);
   const leases = await fetchLeasesDueOn(db, targetDate);
 
   for (const lease of leases) {
@@ -125,26 +129,59 @@ async function handleDueToday(db: FirebaseFirestore.Firestore, today: string) {
   }
 }
 
-async function handleOverdue(db: FirebaseFirestore.Firestore, today: string) {
+async function handleOverdue(
+  db: FirebaseFirestore.Firestore,
+  today: string,
+  settings: NotificationSettings
+) {
+  // Include leases already marked OVERDUE (not just ACTIVE/FOR PAYMENT) so that
+  // a lease whose demand letter previously failed to send (e.g. bad SMTP
+  // credentials) keeps getting retried on every subsequent run instead of
+  // being silently skipped forever once its status flips to OVERDUE.
   const snap = await db
     .collection("leases")
-    .where("status", "in", ["ACTIVE", "FOR PAYMENT"])
+    .where("status", "in", ["ACTIVE", "FOR PAYMENT", "OVERDUE"])
     .where("dueDate", "<", today)
     .get();
 
   const leases = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as LeaseDoc);
 
   for (const lease of leases) {
-    await db.collection("leases").doc(lease.id).update({
-      status: "OVERDUE",
-      updatedAt: new Date().toISOString(),
+    if (lease.status !== "OVERDUE") {
+      await db.collection("leases").doc(lease.id).update({
+        status: "OVERDUE",
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    // Respect the configured grace period before generating the demand letter.
+    const demandLetterDate = addDaysToDateString(lease.dueDate, settings.demandLetterGraceDays);
+    if (today < demandLetterDate) continue;
+
+    // Skip only if a demand letter was ever SUCCESSFULLY sent for this lease —
+    // a same-day-only check would let a permanently-failed send go unretried
+    // once the lease is excluded from the ACTIVE/FOR PAYMENT query above.
+    if (await wasEverNotified(lease.id, "DEMAND_LETTER")) continue;
+
+    const penalty = Math.round(lease.annualRental * (settings.penaltyRatePercent / 100));
+    const pdfBuffer = await generateDemandLetterPdf(lease, penalty, settings.demandLetterResponseDays);
+    const pdfUrl = await uploadDemandLetterPdf(lease.id, pdfBuffer);
+
+    const template = demandLetterTemplate({
+      ...toTemplateData(lease),
+      penalty: `PHP ${penalty.toLocaleString()}`,
+      currentDate: new Date().toLocaleDateString("en-PH"),
     });
 
-    if (await wasNotifiedToday(lease.id, "DEMAND_LETTER", today)) continue;
-
-    const penalty = Math.round(lease.annualRental * PENALTY_RATE);
-    const pdfBuffer = await generateDemandLetterPdf(lease, penalty);
-    const pdfUrl = await uploadDemandLetterPdf(lease.id, pdfBuffer);
+    const sentOk = await sendAndLogNotification({
+      lease,
+      recipient: lease.email,
+      notificationType: "DEMAND_LETTER",
+      subject: template.subject,
+      html: template.html,
+      attachments: [{ filename: `Demand-Letter-${lease.flaNumber}.pdf`, content: pdfBuffer }],
+      pdfUrl,
+    });
 
     await db.collection("demand_letters").add({
       leaseId: lease.id,
@@ -153,22 +190,7 @@ async function handleOverdue(db: FirebaseFirestore.Firestore, today: string) {
       cenro: lease.assignedCenro,
       generatedDate: new Date().toISOString(),
       pdfUrl,
-      emailStatus: "SENT",
-    });
-
-    const template = demandLetterTemplate({
-      ...toTemplateData(lease),
-      penalty: `PHP ${penalty.toLocaleString()}`,
-      currentDate: new Date().toLocaleDateString("en-PH"),
-    });
-
-    await sendAndLogNotification({
-      lease,
-      recipient: lease.email,
-      notificationType: "DEMAND_LETTER",
-      subject: template.subject,
-      html: template.html,
-      attachments: [{ filename: `Demand-Letter-${lease.flaNumber}.pdf`, content: pdfBuffer }],
+      emailStatus: sentOk ? "SENT" : "FAILED",
     });
 
     const recipients = await findRecipientsForLease(lease.assignedPenro, lease.assignedCenro);
@@ -179,6 +201,7 @@ async function handleOverdue(db: FirebaseFirestore.Firestore, today: string) {
         notificationType: "DEMAND_LETTER",
         subject: `[Overdue] FLA ${lease.flaNumber} demand letter sent to lessee`,
         html: template.html,
+        pdfUrl,
       });
     }
 

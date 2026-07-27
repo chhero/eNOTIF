@@ -3,6 +3,7 @@ import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
 import type { PENRODoc, CENRODoc, SessionUser } from "@/types";
 import { writeAuditLog } from "@/lib/data/audit";
+import { ValidationError } from "@/lib/auth/session";
 
 const PENRO_COLLECTION = "penros";
 const CENRO_COLLECTION = "cenros";
@@ -101,12 +102,43 @@ export async function listCENROs(): Promise<CENRODoc[]> {
 }
 
 export async function listCENROsByPENRO(penroId: string): Promise<CENRODoc[]> {
+  // Note: intentionally no .orderBy() here — combining it with .where("penroId", ...)
+  // requires a Firestore composite index. Sort in memory instead since CENRO lists
+  // per PENRO are small.
   const snap = await adminDb
     .collection(CENRO_COLLECTION)
     .where("penroId", "==", penroId)
-    .orderBy("name", "asc")
     .get();
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CENRODoc));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as CENRODoc))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Verifies that `penroName` and (optionally) `cenroName` correspond to real,
+ * currently-registered PENRO/CENRO offices (and that the CENRO belongs to
+ * that PENRO). Throws a ValidationError otherwise. Used by the leases/users
+ * API routes since the PENRO/CENRO office select lists are populated from
+ * Firestore rather than a fixed set of names.
+ */
+export async function verifyOfficeAssignment(
+  penroName: string,
+  cenroName?: string
+): Promise<void> {
+  const penros = await listPENROs();
+  const penro = penros.find((p) => p.name === penroName);
+  if (!penro) {
+    throw new ValidationError(`Assigned PENRO office "${penroName}" was not found`);
+  }
+
+  if (cenroName) {
+    const cenros = await listCENROsByPENRO(penro.id);
+    if (!cenros.some((c) => c.name === cenroName)) {
+      throw new ValidationError(
+        `Assigned CENRO office "${cenroName}" does not belong to PENRO "${penroName}"`
+      );
+    }
+  }
 }
 
 export async function getCENROById(id: string): Promise<CENRODoc | null> {
