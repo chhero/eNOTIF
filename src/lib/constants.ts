@@ -1,4 +1,4 @@
-import type { LeaseStatus, LeaseType, UserRole } from "@/types";
+import type { LeaseStatus, LeaseType, DocumentType, UserRole } from "@/types";
 
 export const REGIONAL_ADMIN: UserRole = "regional_admin";
 export const PENRO_ADMIN: UserRole = "penro_admin";
@@ -24,6 +24,11 @@ export const LEASE_TYPES: { value: LeaseType; label: string }[] = [
   { value: "residential", label: "Residential" },
   { value: "commercial", label: "Commercial" },
   { value: "industrial", label: "Industrial" },
+];
+
+export const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
+  { value: "fla", label: "FLA" },
+  { value: "ppo", label: "Provisional Permit Order" },
 ];
 
 export const STATUS_BADGE_CLASSES: Record<LeaseStatus, string> = {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { LeaseType } from "@/types";
+import type { LeaseType, DocumentType } from "@/types";
 
 const leaseTypeValues: [LeaseType, ...LeaseType[]] = [
   "residential",
@@ -7,12 +7,15 @@ const leaseTypeValues: [LeaseType, ...LeaseType[]] = [
   "industrial",
 ];
 
+const documentTypeValues: [DocumentType, ...DocumentType[]] = ["fla", "ppo"];
+
 // Note: assignedPenro/assignedCenro are validated against the actual
 // Firestore PENRO/CENRO records (see verifyOfficeAssignment in
 // src/lib/data/offices.ts), not a hardcoded list, since offices are managed
 // dynamically via the PENRO/CENRO Management pages.
 export const leaseInputSchema = z.object({
-  flaNumber: z.string().trim().min(1, "FLA number is required").max(50),
+  documentType: z.enum(documentTypeValues),
+  flaNumber: z.string().trim().min(1, "FLA/PPO number is required").max(50),
   applicantName: z.string().trim().min(1, "Applicant name is required").max(200),
   email: z.string().trim().email("Valid email is required"),
   contactNumber: z.string().trim().min(1, "Contact number is required").max(30),
@@ -31,6 +34,7 @@ export const leaseInputSchema = z.object({
   expirationDate: z.string().min(1, "Expiration date is required"),
   assignedPenro: z.string().trim().min(1, "Assigned PENRO is required"),
   assignedCenro: z.string().trim().min(1, "Assigned CENRO is required"),
+  remarks: z.string().trim().max(1000).optional(),
 });
 
 export type LeaseInput = z.infer<typeof leaseInputSchema>;

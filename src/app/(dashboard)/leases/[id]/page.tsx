@@ -5,6 +5,7 @@ import { getLeaseById } from "@/lib/data/leases";
 import { listPaymentsForLease } from "@/lib/data/payments";
 import { listNotificationsForLease } from "@/lib/data/notifications";
 import { can, isWithinScope } from "@/lib/rbac";
+import { LEASE_TYPES, DOCUMENT_TYPES } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LeaseForm } from "@/components/leases/LeaseForm";
 import { DeleteLeaseButton } from "@/components/leases/DeleteLeaseButton";
@@ -89,14 +90,15 @@ export default async function LeaseDetailPage({
 
 function ReadOnlyDetails({ lease }: { lease: NonNullable<Awaited<ReturnType<typeof getLeaseById>>> }) {
   const rows: [string, string][] = [
+    ["Document Type", DOCUMENT_TYPES.find((t) => t.value === lease.documentType)?.label ?? lease.documentType],
     ["Email", lease.email],
     ["Contact Number", lease.contactNumber],
     ["Mailing Address", lease.mailingAddress],
     ["Municipality / Barangay", `${lease.municipality} / ${lease.barangay}`],
-    ["Lease Type", lease.leaseType],
+    ["Lease Type", LEASE_TYPES.find((t) => t.value === lease.leaseType)?.label ?? lease.leaseType],
     ["Area", `${lease.area} sqm`],
     [
-      "Annual Rental",
+      "Occupational Rental",
       lease.annualRental.toLocaleString("en-PH", { style: "currency", currency: "PHP" }),
     ],
     ["Billing Date", lease.billingDate],
@@ -104,6 +106,7 @@ function ReadOnlyDetails({ lease }: { lease: NonNullable<Awaited<ReturnType<type
     ["Lease Start Date", lease.leaseStartDate],
     ["Expiration Date", lease.expirationDate],
     ["Assigned PENRO / CENRO", `${lease.assignedPenro} / ${lease.assignedCenro}`],
+    ["Remarks", lease.remarks || "—"],
   ];
 
   return (

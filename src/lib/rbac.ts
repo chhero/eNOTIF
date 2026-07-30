@@ -43,14 +43,18 @@ const PERMISSIONS: Record<UserRole, Permission[]> = {
     "system:configure",
   ],
   penro_admin: [
-    "leases:create",
     "leases:edit",
     "leases:view",
     "payments:view",
     "users:view",
     "reports:generate",
   ],
-  cenro_personnel: ["leases:view", "users:view", "reports:generate"],
+  cenro_personnel: [
+    "leases:create",
+    "leases:view",
+    "users:view",
+    "reports:generate",
+  ],
   cashier: ["leases:view", "payments:record", "payments:view", "users:view"],
 };
 

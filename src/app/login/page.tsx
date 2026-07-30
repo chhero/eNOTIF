@@ -56,9 +56,9 @@ function LoginForm() {
     <div className="flex min-h-screen flex-1 items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold text-slate-900">eNOTIF</h1>
+          <h1 className="text-xl font-bold text-slate-900">DENR eNOTIF</h1>
           <p className="mt-1 text-sm text-slate-500">
-            DENR Foreshore Lease Notification System
+            Electronic Notification and Tracking System of Insular Government Property Sale Application and Foreshore Lease Transaction of Region VIII
           </p>
           <p className="mt-1 text-xs text-slate-400">
             Authorized DENR personnel only

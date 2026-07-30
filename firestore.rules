@@ -65,7 +65,7 @@ service cloud.firestore {
                     (isCenroPersonnel() && sameCenro(resource.data.assignedCenro)) ||
                     (isCashier() && sameProvince(resource.data.assignedPenro));
 
-      allow create: if isRegionalAdmin() || isPenroAdmin();
+      allow create: if isRegionalAdmin() || isCenroPersonnel();
 
       allow update: if isRegionalAdmin() ||
                       (isPenroAdmin() && sameProvince(resource.data.assignedPenro)) ||

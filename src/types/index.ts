@@ -51,6 +51,8 @@ export interface CENRODoc {
 
 export type LeaseType = "residential" | "commercial" | "industrial";
 
+export type DocumentType = "fla" | "ppo";
+
 export type LeaseStatus =
   | "ACTIVE"
   | "FOR PAYMENT"
@@ -60,6 +62,7 @@ export type LeaseStatus =
 
 export interface LeaseDoc {
   id: string;
+  documentType: DocumentType;
   flaNumber: string;
   applicantName: string;
   email: string;
@@ -77,6 +80,7 @@ export interface LeaseDoc {
   expirationDate: string;
   assignedPenro: string;
   assignedCenro: string;
+  remarks?: string;
   status: LeaseStatus;
   createdAt: string;
   updatedAt: string;

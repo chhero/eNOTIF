@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LEASE_TYPES } from "@/lib/constants";
+import { LEASE_TYPES, DOCUMENT_TYPES } from "@/lib/constants";
 import type { LeaseDoc, PENRODoc, CENRODoc } from "@/types";
 
 type FormState = {
+  documentType: string;
   flaNumber: string;
   applicantName: string;
   email: string;
@@ -22,10 +23,12 @@ type FormState = {
   expirationDate: string;
   assignedPenro: string;
   assignedCenro: string;
+  remarks: string;
 };
 
 function toFormState(lease?: LeaseDoc): FormState {
   return {
+    documentType: lease?.documentType ?? DOCUMENT_TYPES[0].value,
     flaNumber: lease?.flaNumber ?? "",
     applicantName: lease?.applicantName ?? "",
     email: lease?.email ?? "",
@@ -42,6 +45,7 @@ function toFormState(lease?: LeaseDoc): FormState {
     expirationDate: lease?.expirationDate ?? "",
     assignedPenro: lease?.assignedPenro ?? "",
     assignedCenro: lease?.assignedCenro ?? "",
+    remarks: lease?.remarks ?? "",
   };
 }
 
@@ -129,7 +133,14 @@ export function LeaseForm({ lease }: { lease?: LeaseDoc }) {
       )}
 
       <fieldset className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="FLA Number">
+        <Field label="Document Type">
+          <select value={form.documentType} onChange={(e) => update("documentType", e.target.value)} className={inputClass}>
+            {DOCUMENT_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label={form.documentType === "ppo" ? "PPO Number" : "FLA Number"}>
           <input required value={form.flaNumber} onChange={(e) => update("flaNumber", e.target.value)} className={inputClass} />
         </Field>
         <Field label="Applicant Name">
@@ -161,7 +172,7 @@ export function LeaseForm({ lease }: { lease?: LeaseDoc }) {
         <Field label="Area (sqm)">
           <input required type="number" min="0" step="0.01" value={form.area} onChange={(e) => update("area", e.target.value)} className={inputClass} />
         </Field>
-        <Field label="Annual Rental (PHP)">
+        <Field label="Occupational Rental (PHP)">
           <input required type="number" min="0" step="0.01" value={form.annualRental} onChange={(e) => update("annualRental", e.target.value)} className={inputClass} />
         </Field>
 
@@ -209,6 +220,14 @@ export function LeaseForm({ lease }: { lease?: LeaseDoc }) {
               <option key={cenro.id} value={cenro.name}>{cenro.name}</option>
             ))}
           </select>
+        </Field>
+        <Field label="Remarks" full>
+          <textarea
+            value={form.remarks}
+            onChange={(e) => update("remarks", e.target.value)}
+            rows={3}
+            className={inputClass}
+          />
         </Field>
       </fieldset>
 
